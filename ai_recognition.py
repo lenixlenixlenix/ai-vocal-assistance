@@ -12,32 +12,30 @@ settings = Settings()
 class VocalAssistance():
     def __init__(self, token):
         self.client = AsyncOpenAI(api_key=token)
-        
-    async def generate_assistance(self):
+                
+    async def generate_assistance(self) -> str:
         assistant = await self.client.beta.assistants.create(
             name="Chat bot",
             instructions="You are a personal bot that. Answer the questions like i am silly kid.",
             model="gpt-3.5-turbo"
         )
-
-        return assistant
+        settings.assistant_id = assistant.id
 
     async def answer_question(self, question: str) -> str:
-
         answer: str = ""
 
         thread = await self.client.beta.threads.create()
-        assistant = await self.generate_assistance()
+        
 
         message = await self.client.beta.threads.messages.create(
             thread_id=thread.id,
             role="user",
             content=question
         )
-
-        run = await self.client.beta.threads.runs.create(
+        # changed run from create to create_and_poll
+        run = await self.client.beta.threads.runs.create_and_poll(
             thread_id=thread.id,
-            assistant_id=assistant.id,
+            assistant_id=settings.assistant_id,
             instructions=f"Please answer the question {question}"
         )
 
@@ -50,7 +48,7 @@ class VocalAssistance():
                 print("Run failed:", run_status.last_error)
                 answer = "I cannot process your question"
                 break
-            time.sleep(0.5)  # wait for 0.5 second before checking again
+            await asyncio.sleep(0.5) 
 
         messages = await self.client.beta.threads.messages.list(
             thread_id=thread.id

@@ -2,6 +2,7 @@ import asyncio
 import logging
 import sys
 import io
+import os
 
 from pathlib import Path
 
@@ -21,8 +22,9 @@ dp = Dispatcher()
 
 bot = Bot(token=settings.bot_token)
 
-
 voice_helper = VocalAssistance(settings.open_ai_token)
+
+
 
 async def save_voice_as_ogg(bot: Bot, voice: Voice) -> str:
     voice_file_info = await bot.get_file(voice.file_id)
@@ -47,16 +49,21 @@ async def answer_audio(message: Message) -> None:
     await voice_helper.text_to_speech(text_answer)
 
     voice_file = Path("files", "speech.ogg")
+    # speech is overrided, dont need to clean
     voice = FSInputFile(voice_file)
 
-
     await message.answer_voice(voice)
+
+    # delete original voice message
+    os.remove(voice_path)
+
 
 @dp.message()
 async def answer_default(message: Message) -> None:
     await message.answer("Send voice message")
 
 async def main():
+    await voice_helper.generate_assistance()
 
     await dp.start_polling(bot)
 
